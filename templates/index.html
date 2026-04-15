@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}Emergency Fuel & Roadside Aid{% endblock %}
+{% block head %}
+<style>
+.hero { min-height: calc(100vh - 60px); display: flex; align-items: center; position: relative; overflow: hidden; }
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 60% 50%, rgba(255,78,0,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+.hero-tag { display: inline-block; background: rgba(255,78,0,.15); color: var(--fuel); border: 1px solid rgba(255,78,0,.3); padding: .3rem .8rem; border-radius: 20px; font-size: .78rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1.5rem; }
+.hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem,7vw,5.5rem); line-height: .95; letter-spacing: 2px; margin-bottom: 1.5rem; }
+.hero-sub { font-size: 1.05rem; color: var(--muted); line-height: 1.7; margin-bottom: 2rem; max-width: 460px; }
+.hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; }
+.hero-vis { position: relative; }
+.fuel-card-demo {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem;
+  animation: float 4s ease-in-out infinite;
+}
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.fuel-pulse { width: 60px; height: 60px; border-radius: 50%; background: var(--fuel); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1rem; position: relative; }
+.fuel-pulse::after { content:''; position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--fuel); animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.5)} }
+.demo-row { display: flex; justify-content: space-between; align-items: center; margin-top: .8rem; padding: .7rem 0; border-top: 1px solid var(--border); }
+.demo-label { font-size: .78rem; color: var(--muted); }
+.demo-val { font-size: .85rem; font-weight: 600; }
+.features { padding: 5rem 0; border-top: 1px solid var(--border); }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 1.5rem; }
+.feat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; transition: border-color .3s, transform .3s; }
+.feat-card:hover { border-color: var(--fuel); transform: translateY(-4px); }
+.feat-icon { font-size: 2rem; margin-bottom: 1rem; }
+.feat-title { font-weight: 700; margin-bottom: .4rem; }
+.feat-desc { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+.roles { padding: 4rem 0; border-top: 1px solid var(--border); }
+.role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 1rem; }
+.role-card { border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; text-decoration: none; color: var(--text); transition: all .25s; }
+.role-card:hover { border-color: var(--fuel); background: rgba(255,78,0,.05); }
+.role-icon { font-size: 2.2rem; margin-bottom: .6rem; }
+.role-name { font-weight: 700; font-size: .95rem; }
+.role-desc { font-size: .78rem; color: var(--muted); margin-top: .3rem; }
+@media (max-width: 768px) { .hero-grid { grid-template-columns: 1fr; } .hero-vis { display: none; } }
+</style>
+{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-tag">⚡ Real-Time Roadside Help</div>
+        <h1 class="hero-title">FUEL<br><span class="accent">AID</span><br>ANYTIME.</h1>
+        <p class="hero-sub">Emergency fuel delivery and roadside assistance, wherever you are. Connect with verified mechanics and fuel agents in minutes.</p>
+        <div class="hero-btns">
+          <a href="/register" class="btn btn-fuel">Get Started →</a>
+          <a href="/login" class="btn btn-ghost">Sign In</a>
+        </div>
+      </div>
+      <div class="hero-vis">
+        <div class="fuel-card-demo">
+          <div class="fuel-pulse">⛽</div>
+          <div style="font-weight:700;font-size:1.05rem;">Active Request</div>
+          <div style="font-size:.8rem;color:var(--muted);margin-top:.2rem;">Mechanic en route · 8 min ETA</div>
+          <div class="demo-row"><span class="demo-label">Service Type</span><span class="demo-val">Roadside Help</span></div>
+          <div class="demo-row"><span class="demo-label">Status</span><span class="demo-val" style="color:var(--blue)">● Ongoing</span></div>
+          <div class="demo-row"><span class="demo-label">Mechanic</span><span class="demo-val">Ravi Kumar</span></div>
+          <div class="demo-row"><span class="demo-label">Distance</span><span class="demo-val">3.2 km</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="fuel-prices-live" style="padding:2.5rem 0;border-top:1px solid var(--border);background:rgba(255,78,0,.03);">
+  <div class="container">
+    <div class="section-title" style="margin-bottom:1rem;">TODAY'S <span class="accent">FUEL PRICES</span>
+      <span style="font-size:.8rem;font-weight:400;color:var(--muted);font-family:'DM Sans',sans-serif;text-transform:none;letter-spacing:0;margin-left:1rem;">Hyderabad, Telangana</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+      <div style="background:var(--surface);border:1px solid rgba(255,78,0,.3);border-radius:14px;padding:1.5rem;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">⛽</div>
+        <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;">Petrol</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--fuel);">₹{{ "%.2f"|format(fuel_prices.petrol) }}</div>
+        <div style="font-size:.75rem;color:var(--muted);">per litre</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid rgba(255,78,0,.3);border-radius:14px;padding:1.5rem;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">🛢️</div>
+        <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;">Diesel</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--fuel);">₹{{ "%.2f"|format(fuel_prices.diesel) }}</div>
+        <div style="font-size:.75rem;color:var(--muted);">per litre</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid rgba(255,78,0,.3);border-radius:14px;padding:1.5rem;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">💨</div>
+        <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;">CNG</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--fuel);">₹{{ "%.2f"|format(fuel_prices.cng) }}</div>
+        <div style="font-size:.75rem;color:var(--muted);">per litre</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">🚚</div>
+        <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;">Delivery</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--green);">₹30+</div>
+        <div style="font-size:.75rem;color:var(--muted);">+ ₹8/km charge</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="container">
+    <div class="section-title">WHY <span class="accent">FUELAID</span></div>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="feat-icon">📍</div><div class="feat-title">Live Tracking</div><div class="feat-desc">Real-time map tracking of your mechanic or fuel agent using Leaflet.js geolocation.</div></div>
+      <div class="feat-card"><div class="feat-icon">🔒</div><div class="feat-title">Verified Providers</div><div class="feat-desc">Every mechanic and fuel boy is admin-verified before accepting any request.</div></div>
+      <div class="feat-card"><div class="feat-icon">⚡</div><div class="feat-title">Instant Dispatch</div><div class="feat-desc">Socket.io powered real-time notifications. Providers within 100 km get alerts instantly.</div></div>
+      <div class="feat-card"><div class="feat-icon">⭐</div><div class="feat-title">Ratings & Feedback</div><div class="feat-desc">Rate every service and help the community trust the right providers.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="roles">
+  <div class="container">
+    <div class="section-title">CHOOSE YOUR <span class="accent">ROLE</span></div>
+    <div class="role-grid">
+      <a href="/register?role=customer" class="role-card"><div class="role-icon">🚗</div><div class="role-name">Customer</div><div class="role-desc">Request fuel or roadside help</div></a>
+      <a href="/register?role=mechanic" class="role-card"><div class="role-icon">🔧</div><div class="role-name">Mechanic</div><div class="role-desc">Accept nearby service requests</div></a>
+      <a href="/register?role=fuel_boy" class="role-card"><div class="role-icon">⛽</div><div class="role-name">Fuel Agent</div><div class="role-desc">Deliver fuel to customers</div></a>
+      <a href="/login?hint=admin" class="role-card"><div class="role-icon">🛡️</div><div class="role-name">Admin</div><div class="role-desc">Manage platform & providers</div></a>
+    </div>
+  </div>
+</section>
+{% endblock %}

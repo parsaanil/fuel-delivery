@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% block title %}Customer Dashboard{% endblock %}
+{% block head %}
+<style>
+.price-ticker { display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+.price-card { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:.8rem 1.2rem; display:flex; align-items:center; gap:.8rem; flex:1; min-width:140px; }
+.price-icon { font-size:1.5rem; }
+.price-info .price-label { font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.price-info .price-val { font-size:1.25rem; font-family:'Bebas Neue',sans-serif; color:var(--fuel); }
+.price-info .price-unit { font-size:.7rem; color:var(--muted); }
+.quote-box { background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:1rem; margin-top:1rem; display:none; }
+.quote-row { display:flex; justify-content:space-between; padding:.3rem 0;
+  border-bottom:1px solid var(--border); font-size:.85rem; }
+.quote-row:last-child { border-bottom:none; font-weight:700; color:var(--green); }
+.eta-badge { background:rgba(61,158,255,.15); color:var(--blue); border:1px solid rgba(61,158,255,.3);
+  border-radius:20px; padding:.25rem .8rem; font-size:.78rem; font-weight:700; display:inline-block; margin-top:.5rem; }
+.confirm-btn { background:var(--green); color:#000; border:none; border-radius:6px;
+  padding:.4rem .9rem; font-size:.8rem; font-weight:700; cursor:pointer; }
+.confirm-btn:hover { opacity:.85; }
+.star-row { display:flex; gap:.3rem; margin:.5rem 0; }
+.star { font-size:1.4rem; cursor:pointer; color:var(--muted); transition:color .15s; }
+.star.active { color:var(--yellow); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="section-title">CUSTOMER <span class="accent">DASHBOARD</span></div>
+
+  <!-- Live Fuel Price Ticker -->
+  <div class="price-ticker">
+    <div class="price-card">
+      <div class="price-icon">⛽</div>
+      <div class="price-info">
+        <div class="price-label">Petrol</div>
+        <div class="price-val">₹{{ "%.2f"|format(fuel_prices.petrol) }}</div>
+        <div class="price-unit">per litre · Hyderabad</div>
+      </div>
+    </div>
+    <div class="price-card">
+      <div class="price-icon">🛢️</div>
+      <div class="price-info">
+        <div class="price-label">Diesel</div>
+        <div class="price-val">₹{{ "%.2f"|format(fuel_prices.diesel) }}</div>
+        <div class="price-unit">per litre · Hyderabad</div>
+      </div>
+    </div>
+    <div class="price-card">
+      <div class="price-icon">💨</div>
+      <div class="price-info">
+        <div class="price-label">CNG</div>
+        <div class="price-val">₹{{ "%.2f"|format(fuel_prices.cng) }}</div>
+        <div class="price-unit">per litre · Hyderabad</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:2rem;">
+    <div class="stat-box"><div class="stat-num">{{ requests|length }}</div><div class="stat-label">Total Requests</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--blue)">{{ requests|selectattr('status','equalto','ongoing')|list|length }}</div><div class="stat-label">Ongoing</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--green)">{{ requests|selectattr('status','equalto','completed')|list|length }}</div><div class="stat-label">Completed</div></div>
+  </div>
+
+  <div class="grid-2">
+    <!-- New Request Form -->
+    <div class="card">
+      <div class="card-title">⚡ NEW REQUEST</div>
+      <div class="form-group">
+        <label>Service Type</label>
+        <select id="req-type" onchange="toggleFuel(); getQuote();">
+          <option value="roadside">🚗 Roadside Assistance</option>
+          <option value="maintenance">🔧 Maintenance</option>
+          <option value="fuel">⛽ Fuel Delivery</option>
+        </select>
+      </div>
+      <div id="fuel-fields" style="display:none;">
+        <div class="form-group">
+          <label>Fuel Type</label>
+          <select id="fuel-type" onchange="getQuote()">
+            <option value="petrol">Petrol — ₹{{ "%.2f"|format(fuel_prices.petrol) }}/L</option>
+            <option value="diesel">Diesel — ₹{{ "%.2f"|format(fuel_prices.diesel) }}/L</option>
+            <option value="cng">CNG — ₹{{ "%.2f"|format(fuel_prices.cng) }}/L</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Liters</label>
+          <input type="number" id="liters" value="5" min="1" max="50" oninput="getQuote()"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="desc" rows="2" placeholder="Describe your issue…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Your Location</label>
+        <input type="text" id="address" placeholder="Detecting…" readonly/>
+        <input type="hidden" id="lat" value="{{ user.lat }}"/>
+        <input type="hidden" id="lon" value="{{ user.lon }}"/>
+      </div>
+
+      <!-- Cost Quotation Box -->
+      <div class="quote-box" id="quote-box">
+        <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem;">💰 Cost Quotation</div>
+        <div id="quote-rows"></div>
+        <div id="eta-display"></div>
+      </div>
+
+      <button class="btn btn-fuel" onclick="submitRequest()" style="width:100%;justify-content:center;margin-top:1rem;">Send Request →</button>
+    </div>
+
+    <!-- Map -->
+    <div class="card">
+      <div class="card-title">📍 YOUR LOCATION</div>
+      <div class="map-box" id="map"></div>
+    </div>
+  </div>
+
+  <!-- Requests Table -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📋 MY REQUESTS</div>
+    <div id="requests-table">
+      {% if requests %}
+      <table>
+        <thead><tr><th>Type</th><th>Status</th><th>Provider</th><th>ETA</th><th>Cost</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for r in requests %}
+          <tr>
+            <td>{{ r.type|title }}</td>
+            <td>
+              <span class="badge badge-{{ r.status if r.status != 'awaiting_confirmation' else 'ongoing' }}">
+                {{ 'Awaiting Your Confirm' if r.status == 'awaiting_confirmation' else r.status }}
+              </span>
+            </td>
+            <td>{{ r.get('mechanic_name') or r.get('fuel_boy_name') or '—' }}</td>
+            <td style="font-size:.8rem;color:var(--blue);">
+              {% if r.get('quoted_eta_minutes') and r.status in ('ongoing','awaiting_confirmation','pending') %}
+                ~{{ r.quoted_eta_minutes }} min
+              {% else %}—{% endif %}
+            </td>
+            <td style="font-size:.85rem;color:var(--green);">
+              {% if r.get('quoted_total') %}₹{{ r.quoted_total }}{% else %}—{% endif %}
+            </td>
+            <td style="color:var(--muted);font-size:.8rem;">{{ r.created_at[:10] }}</td>
+            <td>
+              {% if r.status == 'awaiting_confirmation' %}
+              <button class="confirm-btn" onclick="confirmDelivery('{{ r.id }}')">✅ Confirm</button>
+              {% elif r.status == 'completed' and r.id not in rated_ids %}
+              <button class="btn btn-ghost btn-sm" onclick="showFeedback('{{ r.id }}')">⭐ Rate</button>
+              {% elif r.status == 'completed' and r.id in rated_ids %}
+              <span style="color:var(--yellow);font-size:.8rem;">⭐ Rated</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--muted);text-align:center;padding:2rem;">No requests yet. Make your first one!</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delivery Modal -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;">
+  <div class="card" style="width:360px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:.5rem;">✅</div>
+    <div class="card-title" style="justify-content:center;">CONFIRM DELIVERY</div>
+    <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.5rem;">Did you receive the fuel/service? Confirm to mark this request complete.</p>
+    <input type="hidden" id="confirm-req-id"/>
+    <div style="display:flex;gap:.8rem;">
+      <button class="btn btn-green" onclick="submitConfirm()" style="flex:1;justify-content:center;">Yes, Received ✓</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('confirm-modal').style.display='none'">Not Yet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="fb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;">
+  <div class="card" style="width:380px;">
+    <div class="card-title">⭐ RATE YOUR EXPERIENCE</div>
+    <input type="hidden" id="fb-req-id"/>
+    <div class="form-group">
+      <label>Rating</label>
+      <div class="star-row" id="star-row">
+        <span class="star" onclick="setRating(1)" data-v="1">★</span>
+        <span class="star" onclick="setRating(2)" data-v="2">★</span>
+        <span class="star" onclick="setRating(3)" data-v="3">★</span>
+        <span class="star" onclick="setRating(4)" data-v="4">★</span>
+        <span class="star" onclick="setRating(5)" data-v="5">★</span>
+      </div>
+      <input type="hidden" id="fb-rating" value="5"/>
+    </div>
+    <div class="form-group">
+      <label>Comment</label>
+      <textarea id="fb-comment" rows="3" placeholder="How was the service? Any feedback for the agent?"></textarea>
+    </div>
+    <div style="display:flex;gap:.8rem;">
+      <button class="btn btn-fuel" onclick="submitFeedback()" style="flex:1;justify-content:center;">Submit Feedback</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('fb-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const lat = parseFloat(document.getElementById('lat').value);
+const lon = parseFloat(document.getElementById('lon').value);
+const map = L.map('map').setView([lat,lon],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+const marker = L.marker([lat,lon]).addTo(map).bindPopup('You are here').openPopup();
+
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lt=pos.coords.latitude, ln=pos.coords.longitude;
+    document.getElementById('lat').value=lt; document.getElementById('lon').value=ln;
+    map.setView([lt,ln],14); marker.setLatLng([lt,ln]);
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lt}&lon=${ln}&format=json`)
+      .then(r=>r.json()).then(d=>{document.getElementById('address').value=d.display_name||'Your location';})
+      .catch(()=>{document.getElementById('address').value=`${lt.toFixed(4)}, ${ln.toFixed(4)}`;});
+    setTimeout(getQuote,800);
+  });
+}
+
+function toggleFuel() {
+  const t=document.getElementById('req-type').value;
+  document.getElementById('fuel-fields').style.display=t==='fuel'?'block':'none';
+}
+
+let quoteTimer=null;
+function getQuote() {
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(async()=>{
+    const type=document.getElementById('req-type').value;
+    const body={type, fuel_type:document.getElementById('fuel-type')?.value||'petrol',
+      liters:parseFloat(document.getElementById('liters')?.value||0)||0,
+      lat:parseFloat(document.getElementById('lat').value),
+      lon:parseFloat(document.getElementById('lon').value)};
+    const r=await fetch('/api/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const q=await r.json();
+    showQuote(q, type);
+  }, 400);
+}
+
+function showQuote(q, type) {
+  const box=document.getElementById('quote-box');
+  const rows=document.getElementById('quote-rows');
+  box.style.display='block';
+  let html='';
+  if(type==='fuel') {
+    html+=`<div class="quote-row"><span>Fuel Cost</span><span>₹${q.fuel_cost}</span></div>`;
+    html+=`<div class="quote-row"><span>Delivery Charge (${q.distance_km} km)</span><span>₹${q.delivery_charge}</span></div>`;
+    html+=`<div class="quote-row"><span>Total</span><span>₹${q.total}</span></div>`;
+  } else {
+    html+=`<div class="quote-row"><span>Service Call</span><span>₹${q.service_cost}</span></div>`;
+    html+=`<div class="quote-row"><span>Travel Charge (${q.distance_km} km)</span><span>₹${q.travel_charge}</span></div>`;
+    html+=`<div class="quote-row"><span>Total</span><span>₹${q.total}</span></div>`;
+  }
+  rows.innerHTML=html;
+  document.getElementById('eta-display').innerHTML=
+    `<div class="eta-badge">🕐 Estimated Arrival: ~${q.eta_minutes} minutes</div>`;
+}
+
+async function submitRequest() {
+  const type=document.getElementById('req-type').value;
+  const body={type,description:document.getElementById('desc').value,
+    lat:parseFloat(document.getElementById('lat').value),
+    lon:parseFloat(document.getElementById('lon').value),
+    address:document.getElementById('address').value,
+    fuel_type:document.getElementById('fuel-type')?.value||'',
+    liters:parseFloat(document.getElementById('liters')?.value||0)};
+  const r=await fetch('/api/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.success) {
+    const q=d.quote;
+    showToast(`Request sent! Est. cost ₹${q.total} · ~${q.eta_minutes} min`);
+    setTimeout(()=>location.reload(),2000);
+  } else showToast('Error sending request.','error');
+}
+
+function confirmDelivery(id) {
+  document.getElementById('confirm-req-id').value=id;
+  document.getElementById('confirm-modal').style.display='flex';
+}
+async function submitConfirm() {
+  const id=document.getElementById('confirm-req-id').value;
+  const r=await fetch(`/api/confirm/${id}`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  const d=await r.json();
+  if(d.success) { showToast('Delivery confirmed! Please rate your experience.'); setTimeout(()=>location.reload(),1500); }
+  document.getElementById('confirm-modal').style.display='none';
+}
+
+let selectedRating=5;
+function setRating(v) {
+  selectedRating=v; document.getElementById('fb-rating').value=v;
+  document.querySelectorAll('.star').forEach(s=>{
+    s.classList.toggle('active', parseInt(s.dataset.v)<=v);
+  });
+}
+setRating(5);
+
+function showFeedback(reqId) {
+  document.getElementById('fb-req-id').value=reqId;
+  document.getElementById('fb-modal').style.display='flex';
+}
+async function submitFeedback() {
+  const body={request_id:document.getElementById('fb-req-id').value,
+    rating:selectedRating, comment:document.getElementById('fb-comment').value};
+  const r=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.success) { showToast('Feedback submitted! Thank you.'); setTimeout(()=>location.reload(),1500); }
+  else showToast(d.error||'Error submitting feedback','error');
+  document.getElementById('fb-modal').style.display='none';
+}
+
+socket.on('request_updated', data=>{
+  if(data.status==='awaiting_confirmation') {
+    showToast('Your service is complete! Please confirm receipt.');
+  } else {
+    showToast(`Request ${data.status}: ${data.type}. ETA ~${data.quoted_eta_minutes||'?'} min`);
+  }
+  setTimeout(()=>location.reload(),1200);
+});
+</script>
+{% endblock %}

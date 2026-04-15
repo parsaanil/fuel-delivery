@@ -1,0 +1,117 @@
+{
+  "users": [
+    {
+      "id": "60dec57c-1572-41bc-b0d5-6c504eb6680d",
+      "name": "Admin",
+      "email": "admin@fuelaid.com",
+      "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "role": "admin",
+      "verified": true,
+      "lat": 17.385,
+      "lon": 78.4867
+    },
+    {
+      "id": "ed8ef543-28ed-46b4-8eba-28d182ccc88f",
+      "name": "abcd",
+      "email": "abcd@gmail.com",
+      "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+      "role": "customer",
+      "verified": true,
+      "lat": 17.24584,
+      "lon": 78.621086,
+      "phone": "+916305267298",
+      "vehicle": "",
+      "joined": "2026-04-15T12:54:15.951666"
+    },
+    {
+      "id": "72bb8f56-2b3c-4542-9d2e-1d3efca6b360",
+      "name": "Vasu",
+      "email": "vasu@fuelaid.com",
+      "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+      "role": "fuel_boy",
+      "verified": true,
+      "lat": 17.246726,
+      "lon": 78.620998,
+      "phone": "+916305267298",
+      "vehicle": "TS07 123f",
+      "joined": "2026-04-15T12:55:29.916398"
+    }
+  ],
+  "requests": [
+    {
+      "id": "6a3ddca7-829b-4295-b5b6-80e07db72f83",
+      "customer_id": "ed8ef543-28ed-46b4-8eba-28d182ccc88f",
+      "customer_name": "abcd",
+      "type": "fuel",
+      "description": "",
+      "lat": 17.246726,
+      "lon": 78.620998,
+      "address": "Ibrahimpatnam mandal, Ranga Reddy, Telangana, 501511, India",
+      "fuel_type": "petrol",
+      "liters": 5.0,
+      "status": "pending",
+      "created_at": "2026-04-15T12:54:45.521853",
+      "mechanic_id": null,
+      "fuel_boy_id": null,
+      "notes": "",
+      "quoted_total": 710.89,
+      "quoted_eta_minutes": 41,
+      "quote_breakdown": {
+        "fuel_cost": 513.15,
+        "delivery_charge": 197.74,
+        "total": 710.89,
+        "eta_minutes": 41
+      },
+      "customer_confirmed": false,
+      "confirmation_time": null,
+      "feedback_rating": null,
+      "feedback_comment": null,
+      "feedback_at": null
+    },
+    {
+      "id": "5f1d1de9-3839-4ec7-8057-213e40c10fcf",
+      "customer_id": "ed8ef543-28ed-46b4-8eba-28d182ccc88f",
+      "customer_name": "abcd",
+      "type": "fuel",
+      "description": "",
+      "lat": 17.246726,
+      "lon": 78.620998,
+      "address": "Ibrahimpatnam mandal, Ranga Reddy, Telangana, 501511, India",
+      "fuel_type": "petrol",
+      "liters": 5.0,
+      "status": "completed",
+      "created_at": "2026-04-15T12:54:45.982374",
+      "mechanic_id": null,
+      "fuel_boy_id": "72bb8f56-2b3c-4542-9d2e-1d3efca6b360",
+      "notes": "",
+      "quoted_total": 710.89,
+      "quoted_eta_minutes": 5,
+      "quote_breakdown": {
+        "fuel_cost": 513.15,
+        "delivery_charge": 197.74,
+        "total": 710.89,
+        "eta_minutes": 41
+      },
+      "customer_confirmed": true,
+      "confirmation_time": "2026-04-15T12:57:24.241825",
+      "feedback_rating": 5,
+      "feedback_comment": "Vasu delivered quickly\n",
+      "feedback_at": "2026-04-15T12:57:47.277989",
+      "fuel_boy_name": "Vasu",
+      "provider_distance_km": 0.0,
+      "accepted_at": "2026-04-15T12:56:24.759499",
+      "completed_at": "2026-04-15T12:56:50.048654"
+    }
+  ],
+  "feedback": [
+    {
+      "id": "4b789e98-fc3b-439e-8558-6da6f15940dd",
+      "request_id": "5f1d1de9-3839-4ec7-8057-213e40c10fcf",
+      "customer_id": "ed8ef543-28ed-46b4-8eba-28d182ccc88f",
+      "customer_name": "abcd",
+      "rating": 5,
+      "comment": "Vasu delivered quickly\n",
+      "created_at": "2026-04-15T12:57:47.278039"
+    }
+  ]
+}

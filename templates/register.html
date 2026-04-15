@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div style="min-height:calc(100vh - 60px);display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:480px;">
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;letter-spacing:2px;margin-bottom:.3rem;">JOIN <span class="accent">FUELAID</span></h1>
+    <p style="color:var(--muted);margin-bottom:2rem;font-size:.9rem;">Create your account and get started.</p>
+    <div class="card">
+      <form method="POST" action="/register" id="reg-form">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="name" placeholder="Your full name" required/>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="you@example.com" required/>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Min 6 characters" required minlength="6"/>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" name="phone" placeholder="+91 9XXXXXXXXX"/>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select name="role" id="role-sel" onchange="toggleFields()">
+            <option value="customer">🚗 Customer</option>
+            <option value="mechanic">🔧 Mechanic</option>
+            <option value="fuel_boy">⛽ Fuel Agent</option>
+          </select>
+        </div>
+        <div id="vehicle-field" class="form-group" style="display:none;">
+          <label>Vehicle / Experience</label>
+          <input type="text" name="vehicle" placeholder="e.g. Honda CB Shine, 5 years exp"/>
+        </div>
+        <!-- Hidden lat/lon fields populated by browser geolocation -->
+        <input type="hidden" name="lat" id="lat" value="17.385"/>
+        <input type="hidden" name="lon" id="lon" value="78.4867"/>
+        <div id="loc-status" style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;">📍 Detecting location…</div>
+        <button type="submit" class="btn btn-fuel" style="width:100%;justify-content:center;padding:.8rem;">Create Account →</button>
+      </form>
+      <p style="text-align:center;margin-top:1rem;font-size:.85rem;color:var(--muted);">Already have an account? <a href="/login" style="color:var(--fuel);">Sign in</a></p>
+      <p style="text-align:center;margin-top:.4rem;font-size:.75rem;color:var(--muted);">Mechanics & fuel agents require admin verification before login.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleFields() {
+  const role = document.getElementById('role-sel').value;
+  document.getElementById('vehicle-field').style.display = (role !== 'customer') ? 'block' : 'none';
+}
+// Pre-fill role from URL param
+const params = new URLSearchParams(location.search);
+if (params.get('role')) { document.getElementById('role-sel').value = params.get('role'); toggleFields(); }
+
+// Geolocation
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById('lat').value = pos.coords.latitude;
+    document.getElementById('lon').value = pos.coords.longitude;
+    document.getElementById('loc-status').textContent = '✅ Location detected';
+    document.getElementById('loc-status').style.color = 'var(--green)';
+  }, () => {
+    document.getElementById('loc-status').textContent = '⚠️ Using default location (Hyderabad)';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block head %}
+<style>
+.price-editor { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+.fuel-row { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem; }
+.fuel-row label { display:block; font-size:.72rem; color:var(--muted); text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem; }
+.csv-btns { display:flex; gap:.8rem; flex-wrap:wrap; margin-top:1rem; }
+.rating-stars { color:var(--yellow); letter-spacing:1px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="section-title">ADMIN <span class="accent">DASHBOARD</span></div>
+
+  <!-- Stats -->
+  <div class="grid-3" style="margin-bottom:2rem;">
+    <div class="stat-box"><div class="stat-num">{{ db.users|length }}</div><div class="stat-label">Total Users</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--yellow)">{{ pending_users|length }}</div><div class="stat-label">Pending Verification</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--green)">{{ db.requests|selectattr('status','equalto','completed')|list|length }}</div><div class="stat-label">Completed Jobs</div></div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Fuel Prices -->
+    <div class="card">
+      <div class="card-title">⛽ CURRENT FUEL PRICES</div>
+      <div class="price-editor">
+        <div class="fuel-row">
+          <label>Petrol (₹/L)</label>
+          <div style="font-size:1.5rem;font-family:'Bebas Neue',sans-serif;color:var(--fuel);">{{ "%.2f"|format(fuel_prices.petrol) }}</div>
+        </div>
+        <div class="fuel-row">
+          <label>Diesel (₹/L)</label>
+          <div style="font-size:1.5rem;font-family:'Bebas Neue',sans-serif;color:var(--fuel);">{{ "%.2f"|format(fuel_prices.diesel) }}</div>
+        </div>
+        <div class="fuel-row">
+          <label>CNG (₹/L)</label>
+          <div style="font-size:1.5rem;font-family:'Bebas Neue',sans-serif;color:var(--fuel);">{{ "%.2f"|format(fuel_prices.cng) }}</div>
+        </div>
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:.8rem;">📍 Hyderabad rates · Update in app.py → FUEL_PRICES dict</div>
+    </div>
+
+    <!-- CSV Downloads -->
+    <div class="card">
+      <div class="card-title">📂 DATA EXPORT (CSV)</div>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">Download up-to-date records for customers, fuel agents, and mechanics.</p>
+      <div class="csv-btns">
+        <a href="/admin/csv/customers" class="btn btn-ghost">⬇ Customers CSV</a>
+        <a href="/admin/csv/agents" class="btn btn-ghost">⬇ Agents CSV</a>
+        <a href="/admin/csv/mechanics" class="btn btn-ghost">⬇ Mechanics CSV</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Verifications -->
+  {% if pending_users %}
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">⏳ PENDING VERIFICATIONS</div>
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Joined</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for u in pending_users %}
+        <tr>
+          <td>{{ u.name }}</td>
+          <td style="color:var(--muted);">{{ u.email }}</td>
+          <td><span class="badge badge-pending">{{ u.role|title }}</span></td>
+          <td>{{ u.phone or '—' }}</td>
+          <td style="font-size:.8rem;color:var(--muted);">{{ u.joined[:10] if u.joined else '—' }}</td>
+          <td><button class="btn btn-green btn-sm" onclick="verify('{{ u.id }}')">✓ Verify</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- All Requests -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📋 ALL SERVICE REQUESTS</div>
+    {% if db.requests %}
+    <table>
+      <thead><tr><th>Type</th><th>Customer</th><th>Provider</th><th>Amount</th><th>ETA</th><th>Status</th><th>Rating</th><th>Date</th><th>Assign</th></tr></thead>
+      <tbody>
+        {% for r in db.requests|reverse %}
+        <tr>
+          <td>{{ r.type|title }}</td>
+          <td>{{ r.customer_name }}</td>
+          <td>{{ r.get('mechanic_name') or r.get('fuel_boy_name') or '—' }}</td>
+          <td style="color:var(--green);">{% if r.get('quoted_total') %}₹{{ r.quoted_total }}{% else %}—{% endif %}</td>
+          <td style="color:var(--blue);font-size:.82rem;">{% if r.get('quoted_eta_minutes') %}~{{ r.quoted_eta_minutes }}m{% else %}—{% endif %}</td>
+          <td><span class="badge badge-{{ r.status if r.status != 'awaiting_confirmation' else 'pending' }}">{{ r.status|replace('_',' ')|title }}</span></td>
+          <td>
+            {% if r.get('feedback_rating') %}
+            <span class="rating-stars">{{ '★'*r.feedback_rating }}{{ '☆'*(5-r.feedback_rating) }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:.8rem;color:var(--muted);">{{ r.created_at[:10] }}</td>
+          <td>
+            {% if r.status == 'pending' %}
+            <div style="display:flex;gap:.4rem;align-items:center;">
+              <select id="w-{{ r.id }}" style="width:120px;padding:.3rem;font-size:.78rem;">
+                <option value="">— Worker —</option>
+              </select>
+              <button class="btn btn-fuel btn-sm" onclick="assign('{{ r.id }}', '{{ r.type }}')">Assign</button>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--muted);padding:1.5rem;text-align:center;">No requests yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Users -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">👥 ALL USERS</div>
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Verified</th></tr></thead>
+      <tbody>
+        {% for u in db.users %}
+        <tr>
+          <td>{{ u.name }}</td>
+          <td style="color:var(--muted);">{{ u.email }}</td>
+          <td><span class="badge badge-{{ 'completed' if u.verified else 'pending' }}">{{ u.role|title }}</span></td>
+          <td>{{ u.phone or '—' }}</td>
+          <td>{{ '✅' if u.verified else '⏳' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Feedback -->
+  {% if db.feedback %}
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">⭐ CUSTOMER FEEDBACK</div>
+    <table>
+      <thead><tr><th>Customer</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for fb in db.feedback|reverse %}
+        <tr>
+          <td>{{ fb.customer_name or '—' }}</td>
+          <td><span class="rating-stars">{{ '★'*fb.rating }}{{ '☆'*(5-fb.rating) }}</span></td>
+          <td style="color:var(--muted);font-size:.85rem;">{{ fb.comment or '—' }}</td>
+          <td style="font-size:.8rem;color:var(--muted);">{{ fb.created_at[:10] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let workers=[];
+fetch('/api/workers').then(r=>r.json()).then(ws=>{
+  workers=ws;
+  document.querySelectorAll('[id^="w-"]').forEach(sel=>{
+    const reqId=sel.id.replace('w-','');
+    ws.forEach(w=>{ const o=document.createElement('option'); o.value=w.id; o.dataset.role=w.role; o.textContent=`${w.name} (${w.role})`; sel.appendChild(o); });
+  });
+});
+
+async function verify(uid) {
+  const r=await fetch(`/api/admin/verify/${uid}`,{method:'POST'});
+  const d=await r.json();
+  if(d.success) { showToast('User verified!'); setTimeout(()=>location.reload(),1000); }
+}
+
+async function assign(reqId, reqType) {
+  const sel=document.getElementById(`w-${reqId}`);
+  const workerId=sel.value;
+  const opt=sel.options[sel.selectedIndex];
+  if(!workerId) { showToast('Select a worker first','error'); return; }
+  const role=opt.dataset.role;
+  const r=await fetch('/api/admin/assign',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({request_id:reqId,worker_id:workerId,role})});
+  const d=await r.json();
+  if(d.success) { showToast('Assigned!'); setTimeout(()=>location.reload(),1000); }
+  else showToast(d.error||'Error','error');
+}
+</script>
+{% endblock %}

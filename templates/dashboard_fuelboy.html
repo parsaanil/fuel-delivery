@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Fuel Agent Dashboard{% endblock %}
+{% block head %}
+<style>
+.price-strip { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+.price-chip { background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  padding:.5rem 1rem; font-size:.82rem; }
+.price-chip span { color:var(--fuel); font-weight:700; }
+.eta-info { background:rgba(61,158,255,.1); border:1px solid rgba(61,158,255,.2);
+  border-radius:8px; padding:.7rem 1rem; font-size:.85rem; color:var(--blue); margin-bottom:1rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="section-title">FUEL AGENT <span class="accent">DASHBOARD</span></div>
+
+  <!-- Fuel Prices -->
+  <div class="price-strip">
+    <div class="price-chip">⛽ Petrol: <span>₹{{ "%.2f"|format(fuel_prices.petrol) }}</span>/L</div>
+    <div class="price-chip">🛢️ Diesel: <span>₹{{ "%.2f"|format(fuel_prices.diesel) }}</span>/L</div>
+    <div class="price-chip">💨 CNG: <span>₹{{ "%.2f"|format(fuel_prices.cng) }}</span>/L</div>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:2rem;">
+    <div class="stat-box"><div class="stat-num" style="color:var(--blue)">{{ deliveries|selectattr('status','equalto','ongoing')|list|length }}</div><div class="stat-label">Active Deliveries</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--yellow)">{{ deliveries|selectattr('status','equalto','awaiting_confirmation')|list|length }}</div><div class="stat-label">Awaiting Confirm</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--green)">{{ deliveries|selectattr('status','equalto','completed')|list|length }}</div><div class="stat-label">Completed</div></div>
+  </div>
+
+  {% set active = deliveries|selectattr('status','in',['ongoing','awaiting_confirmation'])|list %}
+  {% if active %}
+  <div class="grid-2" style="margin-bottom:1.5rem;">
+    {% for r in active %}
+    <div class="card">
+      <div class="card-title">⛽ {{ 'AWAITING CUSTOMER CONFIRMATION' if r.status == 'awaiting_confirmation' else 'ACTIVE DELIVERY' }}</div>
+      <div style="margin-bottom:.8rem;">
+        <span class="badge badge-{{ 'ongoing' if r.status == 'ongoing' else 'pending' }}">{{ r.status|replace('_',' ')|title }}</span>
+        <span style="margin-left:.5rem;font-size:.8rem;color:var(--muted);">{{ r.created_at[:10] }}</span>
+      </div>
+      {% if r.status == 'ongoing' and r.get('eta_minutes') %}
+      <div class="eta-info">🕐 ETA to customer: ~{{ r.eta_minutes }} min ({{ r.distance }} km away)</div>
+      {% endif %}
+      <div class="form-group" style="margin-bottom:.5rem;">
+        <label>Customer</label>
+        <div style="font-weight:600;">{{ r.customer_name }}</div>
+      </div>
+      <div class="form-group" style="margin-bottom:.5rem;">
+        <label>Fuel</label>
+        <div>{{ r.fuel_type|title or 'N/A' }} · {{ r.liters or 0 }}L</div>
+      </div>
+      <div class="form-group" style="margin-bottom:.5rem;">
+        <label>Quoted Amount</label>
+        <div style="color:var(--green);font-weight:700;">₹{{ r.get('quoted_total', 0) }}</div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label>Delivery Address</label>
+        <div style="font-size:.82rem;color:var(--muted);">{{ r.address }}</div>
+      </div>
+      <div class="map-box" id="map-{{ r.id }}" style="margin-bottom:1rem;"></div>
+      {% if r.status == 'ongoing' %}
+      <button class="btn btn-green" style="width:100%;justify-content:center;" onclick="complete('{{ r.id }}')">Mark Delivered ✓</button>
+      {% else %}
+      <div style="text-align:center;color:var(--yellow);font-size:.88rem;padding:.5rem;">Waiting for customer to confirm receipt…</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card" style="margin-bottom:1.5rem;text-align:center;padding:2rem;">
+    <div style="font-size:2.5rem;margin-bottom:.8rem;">⛽</div>
+    <p style="color:var(--muted);">No active deliveries. Admin will assign you fuel requests.</p>
+  </div>
+  {% endif %}
+
+  <!-- History with feedback -->
+  <div class="card">
+    <div class="card-title">📋 DELIVERY HISTORY</div>
+    {% if deliveries %}
+    <table>
+      <thead><tr><th>Customer</th><th>Fuel</th><th>Liters</th><th>Amount</th><th>Status</th><th>Rating</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for r in deliveries %}
+        <tr>
+          <td>{{ r.customer_name }}</td>
+          <td>{{ r.fuel_type|title or '—' }}</td>
+          <td>{{ r.liters or '—' }}</td>
+          <td style="color:var(--green);">{% if r.get('quoted_total') %}₹{{ r.quoted_total }}{% else %}—{% endif %}</td>
+          <td><span class="badge badge-{{ r.status if r.status != 'awaiting_confirmation' else 'pending' }}">{{ r.status|replace('_',' ')|title }}</span></td>
+          <td>
+            {% if r.get('feedback_rating') %}
+              <span style="color:var(--yellow);">{{ '★' * r.feedback_rating }}{{ '☆' * (5 - r.feedback_rating) }}</span>
+              {% if r.get('feedback_comment') %}
+              <span style="font-size:.75rem;color:var(--muted);display:block;">{{ r.feedback_comment[:40] }}{% if r.feedback_comment|length > 40 %}…{% endif %}</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:.8rem;color:var(--muted);">{{ r.created_at[:10] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--muted);padding:1.5rem;text-align:center;">No deliveries yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div id="done-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;">
+  <div class="card" style="width:380px;">
+    <div class="card-title">✅ CONFIRM DELIVERY</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">The customer will be asked to confirm receipt before the job is fully closed.</p>
+    <input type="hidden" id="done-req-id"/>
+    <div class="form-group">
+      <label>Delivery Notes</label>
+      <textarea id="done-notes" rows="2" placeholder="e.g. Delivered 5L petrol, customer satisfied."></textarea>
+    </div>
+    <div style="display:flex;gap:.8rem;">
+      <button class="btn btn-green" onclick="submitComplete()" style="flex:1;justify-content:center;">Confirm Delivery →</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('done-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+{% set active = deliveries|selectattr('status','in',['ongoing','awaiting_confirmation'])|list %}
+{% for r in active %}
+(function(){
+  const m=L.map('map-{{ r.id }}').setView([{{ r.lat }},{{ r.lon }}],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+  L.marker([{{ r.lat }},{{ r.lon }}]).addTo(m).bindPopup('{{ r.customer_name }}').openPopup();
+})();
+{% endfor %}
+
+function complete(id) {
+  document.getElementById('done-req-id').value=id;
+  document.getElementById('done-modal').style.display='flex';
+}
+async function submitComplete() {
+  const id=document.getElementById('done-req-id').value;
+  const notes=document.getElementById('done-notes').value;
+  const r=await fetch(`/api/complete/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes})});
+  const d=await r.json();
+  if(d.success) { showToast('Delivery marked! Waiting for customer confirmation.'); setTimeout(()=>location.reload(),1500); }
+  document.getElementById('done-modal').style.display='none';
+}
+
+socket.on('new_request', data=>{
+  if(data.type==='fuel') showToast('New fuel delivery request!');
+});
+socket.on('request_updated', data=>{
+  if(data.customer_confirmed) { showToast('Customer confirmed delivery! Job complete.'); setTimeout(()=>location.reload(),1500); }
+});
+</script>
+{% endblock %}

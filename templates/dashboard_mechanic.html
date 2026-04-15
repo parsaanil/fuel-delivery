@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Mechanic Dashboard{% endblock %}
+{% block head %}
+<style>
+.eta-info { background:rgba(61,158,255,.1); border:1px solid rgba(61,158,255,.2);
+  border-radius:8px; padding:.7rem 1rem; font-size:.85rem; color:var(--blue); margin-bottom:1rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="section-title">MECHANIC <span class="accent">DASHBOARD</span></div>
+
+  <div class="grid-3" style="margin-bottom:2rem;">
+    <div class="stat-box"><div class="stat-num" style="color:var(--yellow)">{{ nearby|length }}</div><div class="stat-label">Nearby Requests</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--blue)">{{ my_jobs|selectattr('status','equalto','ongoing')|list|length }}</div><div class="stat-label">Active Jobs</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--green)">{{ my_jobs|selectattr('status','equalto','completed')|list|length }}</div><div class="stat-label">Completed</div></div>
+  </div>
+
+  {% set active_jobs = my_jobs|selectattr('status','in',['ongoing','awaiting_confirmation'])|list %}
+  {% if active_jobs %}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-title">🔧 ACTIVE JOBS</div>
+    {% for r in active_jobs %}
+    <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+      {% if r.get('quoted_eta_minutes') %}
+      <div class="eta-info">🕐 Customer ETA from acceptance: ~{{ r.quoted_eta_minutes }} min</div>
+      {% endif %}
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <strong>{{ r.customer_name }}</strong>
+          <span class="badge badge-{{ 'ongoing' if r.status == 'ongoing' else 'pending' }}" style="margin-left:.5rem;">{{ r.status|replace('_',' ')|title }}</span>
+        </div>
+        <div style="color:var(--green);font-weight:700;">{% if r.get('quoted_total') %}₹{{ r.quoted_total }}{% endif %}</div>
+      </div>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:.4rem;">{{ r.type|title }} · {{ r.address }}</div>
+      {% if r.get('description') %}<div style="font-size:.82rem;margin-top:.4rem;">{{ r.description }}</div>{% endif %}
+      {% if r.status == 'ongoing' %}
+      <button class="btn btn-green btn-sm" style="margin-top:.8rem;" onclick="complete('{{ r.id }}')">Mark Service Done ✓</button>
+      {% else %}
+      <div style="color:var(--yellow);font-size:.82rem;margin-top:.8rem;">⏳ Waiting for customer confirmation…</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Nearby Requests -->
+  {% if nearby %}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-title">📍 NEARBY REQUESTS</div>
+    <div class="grid-2">
+      {% for r in nearby %}
+      <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+          <span class="badge badge-pending">{{ r.type|title }}</span>
+          <span style="font-size:.8rem;color:var(--muted);">{{ r.distance }} km · ~{{ r.eta_minutes }} min</span>
+        </div>
+        <div style="font-weight:600;margin-bottom:.3rem;">{{ r.customer_name }}</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:.3rem;">{{ r.address }}</div>
+        {% if r.get('description') %}<div style="font-size:.82rem;margin-bottom:.6rem;">{{ r.description }}</div>{% endif %}
+        <div style="color:var(--green);font-size:.85rem;font-weight:700;margin-bottom:.8rem;">
+          {% if r.get('quoted_total') %}Est. ₹{{ r.quoted_total }}{% endif %}
+        </div>
+        <button class="btn btn-fuel btn-sm" onclick="accept('{{ r.id }}')">Accept Job →</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="margin-bottom:1.5rem;text-align:center;padding:2rem;">
+    <div style="font-size:2.5rem;margin-bottom:.8rem;">🔧</div>
+    <p style="color:var(--muted);">No nearby requests right now. You'll be notified when a job comes in.</p>
+  </div>
+  {% endif %}
+
+  <!-- Job History with ratings -->
+  <div class="card">
+    <div class="card-title">📋 JOB HISTORY</div>
+    {% if my_jobs %}
+    <table>
+      <thead><tr><th>Customer</th><th>Type</th><th>Amount</th><th>Status</th><th>Customer Rating</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for r in my_jobs %}
+        <tr>
+          <td>{{ r.customer_name }}</td>
+          <td>{{ r.type|title }}</td>
+          <td style="color:var(--green);">{% if r.get('quoted_total') %}₹{{ r.quoted_total }}{% else %}—{% endif %}</td>
+          <td><span class="badge badge-{{ r.status if r.status != 'awaiting_confirmation' else 'pending' }}">{{ r.status|replace('_',' ')|title }}</span></td>
+          <td>
+            {% if r.get('feedback_rating') %}
+              <span style="color:var(--yellow);">{{ '★' * r.feedback_rating }}{{ '☆' * (5-r.feedback_rating) }}</span>
+              {% if r.get('feedback_comment') %}
+              <span style="font-size:.75rem;color:var(--muted);display:block;">{{ r.feedback_comment[:40] }}{% if r.feedback_comment|length > 40 %}…{% endif %}</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:.8rem;color:var(--muted);">{{ r.created_at[:10] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--muted);padding:1.5rem;text-align:center;">No jobs yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div id="done-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;">
+  <div class="card" style="width:380px;">
+    <div class="card-title">✅ COMPLETE JOB</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">The customer will be notified to confirm the service.</p>
+    <input type="hidden" id="done-req-id"/>
+    <div class="form-group">
+      <label>Service Notes</label>
+      <textarea id="done-notes" rows="2" placeholder="e.g. Replaced tyre, checked oil levels."></textarea>
+    </div>
+    <div style="display:flex;gap:.8rem;">
+      <button class="btn btn-green" onclick="submitComplete()" style="flex:1;justify-content:center;">Mark Done →</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('done-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function accept(id) {
+  const r=await fetch(`/api/accept/${id}`,{method:'POST'});
+  const d=await r.json();
+  if(d.success) { showToast(`Job accepted! ETA to customer: ~${d.eta_minutes} min`); setTimeout(()=>location.reload(),1500); }
+  else showToast(d.error||'Error','error');
+}
+function complete(id) {
+  document.getElementById('done-req-id').value=id;
+  document.getElementById('done-modal').style.display='flex';
+}
+async function submitComplete() {
+  const id=document.getElementById('done-req-id').value;
+  const notes=document.getElementById('done-notes').value;
+  const r=await fetch(`/api/complete/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes})});
+  const d=await r.json();
+  if(d.success) { showToast('Job complete! Waiting for customer confirmation.'); setTimeout(()=>location.reload(),1500); }
+  document.getElementById('done-modal').style.display='none';
+}
+socket.on('new_request', data=>{
+  if(['roadside','maintenance'].includes(data.type)) showToast('New job request nearby!');
+});
+socket.on('request_updated', data=>{
+  if(data.customer_confirmed) { showToast('Customer confirmed! Job fully closed.'); setTimeout(()=>location.reload(),1500); }
+});
+</script>
+{% endblock %}
