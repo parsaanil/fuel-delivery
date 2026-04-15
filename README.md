@@ -55,6 +55,5 @@ pip install flask flask-socketio
 python app.py
 ```
 
-Visit http://localhost:5000
-
-Default admin: `admin@fuelaid.com` / `admin123`
+### Author
+Anil parsa
